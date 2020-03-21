@@ -14,20 +14,27 @@ func run(i int, ctx context.Context, deadChan chan<- int, args ...string) {
 	prefix := fmt.Sprintf("[%d]:", i)
 	log.Println(prefix, "starting", args)
 	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	if err == nil {
 		log.Println(prefix, "terminated gracefully")
 	} else {
 		log.Println(prefix, "terminated with error:", err)
 	}
-	deadChan<-i
+	deadChan <- i
 }
 
 func main() {
-	programsArgs := [][]string{
+	if len(os.Args) <= 1 {
+		log.Println("usage: multi-init program-one arg1 arg2 --- program2 arg1 arg2 --- ...")
+		os.Exit(1)
 	}
 
+	programsArgs := [][]string{}
+
 	var args []string
+
 	for _, arg := range os.Args[1:] {
 		if arg == "---" {
 			programsArgs = append(programsArgs, args)
@@ -38,6 +45,11 @@ func main() {
 	}
 	programsArgs = append(programsArgs, args)
 	args = nil
+
+	if len(programsArgs) == 0 {
+		log.Println("no child program given. exiting")
+		os.Exit(1)
+	}
 
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
@@ -62,7 +74,7 @@ func main() {
 		case os.Kill:
 			log.Println("- SIGKILL -")
 		}
-	case i := <- deadChan:
+	case i := <-deadChan:
 		log.Printf("process [%d] died. stopping everything", i)
 		exitCode = 1
 	}
