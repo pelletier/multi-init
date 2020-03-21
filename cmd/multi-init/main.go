@@ -25,9 +25,19 @@ func run(i int, ctx context.Context, deadChan chan<- int, args ...string) {
 
 func main() {
 	programsArgs := [][]string{
-		{"/usr/bin/sleep", "5"},
-		{"/bin/bash", "-c", "while true; do echo 'still alive'; sleep 1; done"}, 
 	}
+
+	var args []string
+	for _, arg := range os.Args[1:] {
+		if arg == "---" {
+			programsArgs = append(programsArgs, args)
+			args = nil
+		} else {
+			args = append(args, arg)
+		}
+	}
+	programsArgs = append(programsArgs, args)
+	args = nil
 
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
