@@ -4,9 +4,9 @@ export CGO_ENABLED :=0
 
 bin := multi-init
 dist.name := multi-init_$(GOOS)_$(GOARCH)
-dist.out := $(dist.name).tar.bz2
+dist.out := $(dist.name).tar.xz
 tiny.bin := $(bin)-tiny
-tiny.dist.out := $(dist.name)-tiny.tar.bz2
+tiny.dist.out := $(dist.name)-tiny.tar.xz
 
 upx.version := 3.96
 upx.name := upx-$(upx.version)-$(GOARCH)_$(GOOS)
@@ -32,12 +32,12 @@ $(tiny.bin): $(bin)
 dist: $(dist.out) $(tiny.dist.out)
 
 $(dist.out): $(bin)
-	tar -cjf $@ $^
+	tar -cJf $@ $^
 
 $(tiny.dist.out): $(tiny.bin)
-	tar -cjf $@ $^
+	tar -cJf $@ $^
 
 
 .PHONY:
 clean:
-	rm -Rf $(bin) $(dist.out) $(tiny.dist.out) .tmp
+	rm -Rf $(bin) $(tiny.bin) $(dist.out) $(tiny.dist.out) .tmp
