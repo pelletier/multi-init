@@ -1,31 +1,43 @@
-export GOOS:=linux
-export GOARCH:=amd64
+export GOOS := linux
+export GOARCH := amd64
+export CGO_ENABLED :=0
 
 bin := multi-init
-dist.out := multi-init_$(GOOS)_$(GOARCH).tar.xz
-tiny := false
+dist.name := multi-init_$(GOOS)_$(GOARCH)
+dist.out := $(dist.name).tar.bz2
+tiny.bin := $(bin)-tiny
+tiny.dist.out := $(dist.name)-tiny.tar.bz2
 
 upx.version := 3.96
 upx.name := upx-$(upx.version)-$(GOARCH)_$(GOOS)
 upx.url := https://github.com/upx/upx/releases/download/v3.96/$(upx.name).tar.xz
 
+go := go
+go.build := $(go) build -ldflags="-s -w"
+
 all: multi-init
 
 $(bin): cmd/multi-init/main.go
-	go build -o $@ -ldflags="-s -w" $^
-	if [ $(tiny) = "true" ]; then \
-		rm -rf .tmp && mkdir -p .tmp \
-		&& curl -L $(upx.url) \
-		| tar -C .tmp -xJf - $(upx.name)/upx && ./.tmp/$(upx.name)/upx $@ \
-		&& rm -rf .tmp; \
-	fi
+	$(go.build) -o $@ $^
+
+$(tiny.bin): $(bin)
+	rm -rf .tmp
+	mkdir -p .tmp
+	curl -L $(upx.url) | tar -C .tmp -xJf - $(upx.name)/upx
+	cp $^ $@
+	./.tmp/$(upx.name)/upx $@
+	rm -rf .tmp;
 
 .PHONY:
-dist: $(dist.out)
+dist: $(dist.out) $(tiny.dist.out)
 
 $(dist.out): $(bin)
-	tar -cJf $@ $^
+	tar -cjf $@ $^
+
+$(tiny.dist.out): $(tiny.bin)
+	tar -cjf $@ $^
+
 
 .PHONY:
 clean:
-	rm -Rf $(bin) $(dist.out) .tmp
+	rm -Rf $(bin) $(dist.out) $(tiny.dist.out) .tmp
